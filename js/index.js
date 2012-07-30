@@ -209,6 +209,127 @@
 					'username' : user
 							|| 'Anonymous',
 					'background' : color,
+					'message' : contenter.innerHTML = max_msg;
+		} 
+		return true;
+	});
+	
+	PUBNUB.subscribe({
+		'channel' : pub_channel,
+		'callback' : function(message) {
+			if (message['type'] === 'user') {
+				var name = message['content'];
+				var the_uuid = message['uuid'];
+				if (!ids[the_uuid]) {	//new user
+					ids[the_uuid] = name;
+					names[name] = true;
+					var sysinfo = new_sysinfo(sys_type.USER, name, 'joins the chat', format_time());
+					var member_bbl = new_member(the_uuid, name, message['color']);
+					list.innerHTML = sysinfo.innerHTML + list.innerHTML;
+					members.innerHTML += member_bbl.innerHTML;	//maybe sort by name?
+					
+					if (the_uuid === uuid)	{//its me, change the ui and private ch
+						update_namebar(name);
+					}
+				} else {	//change name
+					if (name !== ids[the_uuid]) {
+						if (!names[name]) {
+							var old = ids[the_uuid];
+							ids[the_uuid] = name;
+							var sysinfo = new_sysinfo(sys_type.USER, old, 'changed nickname: '+ name, format_time());
+							list.innerHTML = sysinfo.innerHTML + list.innerHTML;
+							document.getElementById(the_uuid).innerHTML = name;	//group member list
+							if (the_uuid === uuid)	//its me, change the ui and private ch
+								update_namebar(name);
+						} else 
+							tips.innerHTML = 'This name already taken :-(';
+					} else
+						tips.innerHTML = 'This is your current name :-)';
+				}
+				
+				//username.parentElement.innerText = ids[uuid] || '';
+				if (cur_sysbbl === max_bbl) {
+					//remove the last one
+				} else
+					cur_sysbbl++;
+			} else if (message['type'] === 'chat') {	//chat message
+				the_content = replace_at(message['content']);
+				var bubble = new_bubble(message['sender'], the_content.message, message['color']);
+				box.innerHTML = bubble.innerHTML + box.innerHTML;
+				input.value = '';
+				input.focus();
+				//I sent this msg, and containing @, send notification to the person...
+				if (message['sender'] === ids[uuid] && (the_content.mentioned.length > 0)) {
+					var l = the_content.mentioned;
+					for (var i = 0; i < l.length; i++) {
+							PUBNUB.publish({
+								'channel' : pub_channel,	
+								'message' : {
+									'type' : 'mentioned',
+									'sender' : message['sender'],
+									'receiver' : l[i] 
+								}
+							});
+							console.log('publish', message['sender']+' mentioned '+l[i]);
+					}
+				}//end @list
+				
+				if (cur_msgbbl === max_bbl) {
+					//remove the last one
+				} else
+					cur_msgbbl++;
+			} else if (message['type'] === 'mentioned') {
+				console.log('mentioned:', message['receiver']+' from '+message['sender']);
+				if (message['receiver'] === ids[uuid]) {	//make sure its for me...
+					var sysinfo = new_sysinfo(sys_type.MENTIONED, message['sender'], '@you in a message', format_time());
+					list.innerHTML = sysinfo.innerHTML + list.innerHTML;
+				}
+			}
+			//ignore other types
+		}
+	});
+	
+	//clear message
+	PUBNUB.bind('click', clear_chat, function() {
+		box.innerHTML = '';
+		cur_msgbbl = 0;
+	});
+	PUBNUB.bind('click', clear_sys, function() {
+		list.innerHTML = '';
+		cur_sysbbl = 0;
+	});
+	PUBNUB.bind('click', hide, function() {
+		if (hide.innerHTML === 'Hide') {
+			$('#side').animate({
+				'width': '110px'
+			  }, {
+			    duration: 800
+			  });
+			hide.innerHTML = 'Show';
+		} else {
+			$('#side').animate({
+				'width': '420px' 
+			  }, {
+			    duration: 800
+			  });
+			hide.innerHTML = 'Hide';
+		}
+	});
+//	
+//	PUBNUB.bind('click', show, function() {
+//		$('#side').show('slide', { direction: 'right' }, 800);
+//		show.style.visibility='hidden';
+//	});
+	
+	//bubbles
+	function new_bubble(user, content, color) {
+		var bubble = document.createElement('div');
+		// Update The Message Text Body
+		bubble.innerHTML = PUBNUB.supplant(message_bubble_tpl,
+				{
+					'username' : user
+							|| 'Anonymous',
+					'background' : color,
 					'message' : content
 				});
 		return bubble;
