@@ -84,16 +84,34 @@
 					ids[the_uuid] = name;
 					names[name] = true;
 					var sysinfo = new_sysinfo(sys_type.USER, name, 'joins the chat', format_time());
-					var member_bbl = new_member(the_uuid, name, message['color']);
+					//var member_bbl = new_member(the_uuid, name, message['color']);
 					list.innerHTML = sysinfo.innerHTML + list.innerHTML;
-					members.innerHTML += member_bbl.innerHTML;	//maybe sort by name?
-					
+					//members.innerHTML += member_bbl.innerHTML;	//maybe sort by name?
+					users.add(new User({
+						uuid: uuid,
+						name : name,
+						color: message['color']
+						})
+					);
 					if (the_uuid === uuid)	{//its me, change the ui and private ch
 						update_namebar(name);
 					}
 				} 
 			} //message type
 		} 
+	});
+	
+	
+
+	UserList = Backbone.View.extend({
+		el : document.getElementById('member-list'),
+		
+		addOne : function(model) {
+			// The parameter passed is a reference to the model that was added
+			var member_bbl = new_member(model.get('uuid'), model.get('name'), model.get('color'));
+			console.log(this.userlist.el.innerHTML);
+			this.userlist.el.innerHTML += member_bbl.innerHTML;
+		}
 	});
 	
 	User = Backbone.Model.extend({
@@ -105,31 +123,36 @@
 			this.set({'name' : name})
 		}
 	});
-
+	
 	Users = Backbone.Collection.extend({
 		model: User,
 		// This is our Users collection and holds our User models
-		initialize : function(models, options) {
-			username.focus();
-			this.bind("add", options.view.addFriendLi);
-		},
-		
+//		initialize : function(models, options) {
+//			this.bind("add", options.view.addFriendLi);
+//		},
+		initialize: function(){
+            // When initialized we want to associate a view with this collection
+            this.userlist = new UserList;
+            this.bind('add', this.userlist.addOne);	//later change to render? because sort
+        },
 		comparator: function() {
-			return model.get('name');
+			return this.model.get('name');
 		}
 	});
 
-	//var userList = new 
+	var users = new Users;
+	
 	AppView = Backbone.View.extend({
-		el : $('#appview'),
+		el : document.getElementById('appview'),
 		initialize : function() {
 			username.focus();
 			counter.innerHTML = max_msg;
 			name_change.style.visibility = 'hidden';
 			
-			this.users = new Users(null, {
-				view : this
-			});
+//			this.users = new Users(null, {
+//				view : this
+//			});
+			
 		},
 		events : {
 			//"click #add-user" : "showPrompt",
@@ -143,18 +166,18 @@
 					return false;
 				}
 				var name = username.value.slice(0, max_name).replace(br_rx, '');
-				this.users.add(new User({
-					uuid: uuid,
-					name : name
-					})
-				);
+//				users.add(new User({
+//					uuid: uuid,
+//					name : name
+//					})
+//				);
 				PUBNUB.publish({
 					'channel' : pub_channel,
 					'message' : {
 						'type' : 'user',
 						'uuid' : uuid,
 						'color' : color,
-						'content' : username.value.slice(0, max_name).replace(br_rx, '')
+						'content' : name
 					}
 				});
 				username.value = '';
