@@ -1,14 +1,14 @@
 (function() {
 	var pub_channel = 'chat',
-		//boxes
+		// boxes
 		box = PUBNUB.$('box'), list = PUBNUB.$('info-list'), members = PUBNUB.$('member-list'), input = PUBNUB.$('input'),  username = PUBNUB.$('username'), 
 		name_change = PUBNUB.$('nickname-change'),  name_bar = PUBNUB.$('namebar'), tips = PUBNUB.$('tips'), counter_div = PUBNUB.$('count-div'), counter  = PUBNUB.$('count'),
-		//buttons
+		// buttons
 		clear_chat = PUBNUB.$('clear-chat'), clear_sys = PUBNUB.$('clear-sys'), hide = PUBNUB.$('hide'),  
-		//backend variables
+		// backend variables
 		ids = {}, names = {}, publishes = 1, br_rx = /[\r\n<>]/g, space_rx = /^\s+|\s+$/g, 
 		max_name = 20, max_msg = 140, max_bbl = 10, cur_msgbbl = 0, cur_sysbbl = 0;
-		//user related
+		// user related
 		uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
 		    var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
 		    return v.toString(16);
@@ -46,21 +46,21 @@
 	}
 	
 	function update_namebar(new_name) {
-		//my_channel = 'ch' + name;//easy for finding private
+		// my_channel = 'ch' + name;//easy for finding private
 		username.value = '';
 		$('#username').fadeOut(300, function() {
 			name_bar.innerHTML = new_name;
 			name_bar.style.display = 'block';
 		});
 		
-		//username.style.display = 'none';
+		// username.style.display = 'none';
 		name_change.innerHTML = 'Change Nickname';
 		name_change.style.visibility = 'visible';
 		input.focus();
 		tips.innerHTML = '';
 	}
 	
-	//time format
+	// time format
 	function format_time() {
 		var dt = new Date();
 	    var hours = dt.getHours();
@@ -80,36 +80,35 @@
 			if (message['type'] === 'user') {
 				var name = message['content'];
 				var the_uuid = message['uuid'];
-				if (!ids[the_uuid]) {	//new user
+				if (!ids[the_uuid]) {	// new user
 					ids[the_uuid] = name;
 					names[name] = true;
 					var sysinfo = new_sysinfo(sys_type.USER, name, 'joins the chat', format_time());
-					//var member_bbl = new_member(the_uuid, name, message['color']);
+					// var member_bbl = new_member(the_uuid, name,
+					// message['color']);
 					list.innerHTML = sysinfo.innerHTML + list.innerHTML;
-					//members.innerHTML += member_bbl.innerHTML;	//maybe sort by name?
+					// members.innerHTML += member_bbl.innerHTML;
+					// //maybe sort by name?
 					users.add(new User({
 						uuid: uuid,
 						name : name,
 						color: message['color']
 						})
 					);
-					if (the_uuid === uuid)	{//its me, change the ui and private ch
+					if (the_uuid === uuid)	{// its me, change the ui
 						update_namebar(name);
 					}
 				} 
-			} //message type
-		} 
+			} // message type
+		}
 	});
 	
-	
-
 	UserList = Backbone.View.extend({
 		el : document.getElementById('member-list'),
 		
 		addOne : function(model) {
 			// The parameter passed is a reference to the model that was added
 			var member_bbl = new_member(model.get('uuid'), model.get('name'), model.get('color'));
-			console.log(this.userlist.el.innerHTML);
 			this.userlist.el.innerHTML += member_bbl.innerHTML;
 		}
 	});
@@ -127,16 +126,17 @@
 	Users = Backbone.Collection.extend({
 		model: User,
 		// This is our Users collection and holds our User models
-//		initialize : function(models, options) {
-//			this.bind("add", options.view.addFriendLi);
-//		},
+// initialize : function(models, options) {
+// this.bind("add", options.view.addFriendLi);
+// },
 		initialize: function(){
             // When initialized we want to associate a view with this collection
             this.userlist = new UserList;
-            this.bind('add', this.userlist.addOne);	//later change to render? because sort
+            this.bind('add', this.userlist.addOne);	// later change to render?
+													// because sort
         },
-		comparator: function() {
-			return this.model.get('name');
+		comparator: function(user) {
+			return user.get('name');
 		}
 	});
 
@@ -148,29 +148,28 @@
 			username.focus();
 			counter.innerHTML = max_msg;
 			name_change.style.visibility = 'hidden';
-			
-//			this.users = new Users(null, {
-//				view : this
-//			});
+			//input.style.height = '45px';
+// this.users = new Users(null, {
+// view : this
+// });
 			
 		},
 		events : {
-			//"click #add-user" : "showPrompt",
-			'keydown #username' : 'newUser'
+			'keydown #username' : 'newUser',
+			//may put into a single View...
+			'keydown #input' : 'newMessage',
+			'keyup #input' : 'countChar',
+			'focus #input' : 'resize',
+			'blur #input' : 'resize'
 		},
 		'newUser' : function(e) {
 			if (e.keyCode === 13) {
-				//var name = $(e.currentTarget).val();
+				// var name = $(e.currentTarget).val();
 				if (username.value.replace(space_rx, "").length === 0) {
 					username.value = '';
 					return false;
 				}
 				var name = username.value.slice(0, max_name).replace(br_rx, '');
-//				users.add(new User({
-//					uuid: uuid,
-//					name : name
-//					})
-//				);
 				PUBNUB.publish({
 					'channel' : pub_channel,
 					'message' : {
@@ -185,12 +184,33 @@
 			return true;
 		},
 		
-		addFriendLi : function(model) {
-			// The parameter passed is a reference to the model that was added
-			$("#users-list").append("<li>" + model.get('name') + "</li>");
-			members.innerHTML += "<li>" + model.get('name') + "</li>";
+		'countChar' : function(e) {
+			if (e.keyCode !== 13) {
+				counter.innerHTML = max_msg - input.value.length;
+			}
+			return true;
+		},
+		
+		'resize' : function(e) {
+			var that = e.currentTarget;
+			if (that.style.height !== '100px') {
+				$(that).animate(
+						{height: '100px'}, 100
+				);
+				counter_div.style.visibility = 'visible';
+			} else {//blur
+				if (that.value.replace(space_rx, "").length === 0) {
+					$(that).animate(
+							{height: '45px'}, 100
+					);
+					that.value = '';
+					//counter_div.innerHTML = '';
+				counter_div.style.visibility = 'hidden';
+				}
+			}
 		}
 	});
 
 	var appview = new AppView;
+ 
 })();
