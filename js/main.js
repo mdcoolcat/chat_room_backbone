@@ -18,7 +18,7 @@
 	
 	var message_bubble_tpl = '<div style="display:inline-block;max-width:400px;background-color:#{background};color:#fff;text-shadow: #000 0 1px 1px;font-size: 15px;background-image:-moz-linear-gradient(rgba(255,255,255,0.8)0%,rgba(0,0,0,0)100%);background-image:-webkit-gradient(linear,left top,left bottom,from(rgba(255,255,255,0.8)),to(rgba(0,0,0,0)));border:0;margin:0px 0px 7px 0px;padding:6px 40px 6px 20px;border-radius:50px;-moz-border-radius:50px;-webkit-border-radius:50px;overflow:hidden;-o-transition:all 0.3s;-moz-transition:all 0.3s;-webkit-transition:all 0.3s;transition:all 0.3s;position:relative;"><strong>{username}&nbsp;-&nbsp;</strong>&nbsp;{message}</div></br>';
 	var sysinfo_tpl = '<div style="display:inline-block;max-width:400px;background-color:#{background};color:#fff;font-size:12px;text-shadow: #000 0 1px 1px;font-size: 15px;background-image:-moz-linear-gradient(rgba(255,255,255,0.8)0%,rgba(0,0,0,0)100%);background-image:-webkit-gradient(linear,left top,left bottom,from(rgba(255,255,255,0.8)),to(rgba(0,0,0,0)));border:0;margin:2px 0px 5px 0px;padding:3px 20px 3px 10px;border-radius:20px;-moz-border-radius:50px;-webkit-border-radius:50px;overflow:hidden;-o-transition:all 0.3s;-moz-transition:all 0.3s;-webkit-transition:all 0.3s;transition:all 0.3s;position:relative;">{time}&nbsp;-&nbsp;<strong>{username}</strong>&nbsp;{message}</div></br>';
-	var member_bubble_tpl = '<div id="{uuid}" style="max-width:400px;background-color:#{background};color:#fff;font-size:12px;text-shadow: #000 0 1px 1px;font-size: 15px;background-image:-moz-linear-gradient(rgba(255,255,255,0.8)0%,rgba(0,0,0,0)100%);background-image:-webkit-gradient(linear,left top,left bottom,from(rgba(255,255,255,0.8)),to(rgba(0,0,0,0)));border:0;margin:2px 0px 5px 0px;padding:3px 20px 3px 10px;border-radius:20px;-moz-border-radius:50px;-webkit-border-radius:50px;overflow:hidden;-o-transition:all 0.3s;-moz-transition:all 0.3s;-webkit-transition:all 0.3s;transition:all 0.3s;position:relative;">{username}</div>';
+	//var member_bubble_tpl = '<div id="{uuid}" style="max-width:400px;background-color:#{background};color:#fff;font-size:12px;text-shadow: #000 0 1px 1px;font-size: 15px;background-image:-moz-linear-gradient(rgba(255,255,255,0.8)0%,rgba(0,0,0,0)100%);background-image:-webkit-gradient(linear,left top,left bottom,from(rgba(255,255,255,0.8)),to(rgba(0,0,0,0)));border:0;margin:2px 0px 5px 0px;padding:3px 20px 3px 10px;border-radius:20px;-moz-border-radius:50px;-webkit-border-radius:50px;overflow:hidden;-o-transition:all 0.3s;-moz-transition:all 0.3s;-webkit-transition:all 0.3s;transition:all 0.3s;position:relative;">{username}</div>';
 	
 	//global functions
 	function newSysInfo(sys_type, name, info, time) {
@@ -101,8 +101,6 @@
 					ids[the_uuid] = name;
 					names[name] = true;
 					var sysinfo = newSysInfo(sys_type.USER, name, 'joins the chat', format_time());
-					// var member_bbl = newMember(the_uuid, name,
-					// message['color']);
 					list.innerHTML = sysinfo.innerHTML + list.innerHTML;
 					// members.innerHTML += member_bbl.innerHTML;
 					// //maybe sort by name?
@@ -178,19 +176,33 @@
 		
 		addOne : function(model) {
 			// The parameter passed is a reference to the model that was added
-			var member_bbl = newMember(model.get('uuid'), model.get('name'), model.get('color'));
+			//var member_bbl = newMember(model.get('uuid'), model.get('name'), model.get('color'));
+			var member_bbl = new UserView({model: model}).render().el;
 			this.userlist.el.innerHTML += member_bbl.innerHTML;
 		}
 	});
 	
 	var UserView = Backbone.View.extend({
+		tagName: 'div',
+		template: _.template('<div class="member-name" style="max-width:400px;color:#fff;font-size:12px;text-shadow: #000 0 1px 1px;font-size: 15px;background-image:-moz-linear-gradient(rgba(255,255,255,0.8)0%,rgba(0,0,0,0)100%);background-image:-webkit-gradient(linear,left top,left bottom,from(rgba(255,255,255,0.8)),to(rgba(0,0,0,0)));border:0;margin:2px 0px 5px 0px;padding:3px 20px 3px 10px;border-radius:20px;-moz-border-radius:50px;-webkit-border-radius:50px;overflow:hidden;-o-transition:all 0.3s;-moz-transition:all 0.3s;-webkit-transition:all 0.3s;transition:all 0.3s;position:relative;"></div>'),
 		
-	}
+		initialize: function() {
+			_.bindAll(this, 'render');
+			this.model.bind('change', this.render);
+			this.model.view = this;
+		},
+		
+		render: function() {
+			var _model = this.model.toJSON();
+			this.el.innerHTML = this.template(_model);
+			this.el.setAttribute('id', _model.uuid);
+			this.el.firstChild.innerHTML = _model.name;
+			//this.el.style.background-color = '#' + _model.color;
+			return this;
+		}
+	});
+	
 	var User = Backbone.Model.extend({
-		uuid : uuid,
-		name : 'Anonymous',
-		color: uuid.slice(-3),
-		
 		changeName: function(name) {
 			this.set({'name' : name})
 		}
