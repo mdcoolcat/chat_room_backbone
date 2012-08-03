@@ -6,7 +6,7 @@
 		// buttons
 		clear_chat = PUBNUB.$('clear-chat'), clear_sys = PUBNUB.$('clear-sys'),  
 		// backend variables
-		ids = {}, names = {}, publishes = 1, br_rx = /[\r\n<>]/g, spaceReg = /^\s+|\s+$/g, 
+		ids = {}, names = {}, publishes = 1, brReg = /[\r\n<>]/g, spaceReg = /^\s+|\s+$/g, 
 		max_name = 20, max_msg = 140, max_bbl = 10, cur_msgbbl = 0, cur_sysbbl = 0;
 		// user related
 		uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -173,7 +173,7 @@
 		}
 	});
 	
-	UserList = Backbone.View.extend({
+	var UserList = Backbone.View.extend({
 		el : document.getElementById('member-list'),
 		
 		addOne : function(model) {
@@ -183,7 +183,10 @@
 		}
 	});
 	
-	User = Backbone.Model.extend({
+	var UserView = Backbone.View.extend({
+		
+	}
+	var User = Backbone.Model.extend({
 		uuid : uuid,
 		name : 'Anonymous',
 		color: uuid.slice(-3),
@@ -193,12 +196,8 @@
 		}
 	});
 	
-	Users = Backbone.Collection.extend({
+	var Users = Backbone.Collection.extend({
 		model: User,
-		// This is our Users collection and holds our User models
-// initialize : function(models, options) {
-// this.bind("add", options.view.addFriendLi);
-// },
 		initialize: function(){
             // When initialized we want to associate a view with this collection
             this.userlist = new UserList;
@@ -241,7 +240,7 @@
 					that.value = '';
 					return false;
 				}
-				var name = that.value.slice(0, max_name).replace(br_rx, '');
+				var name = that.value.slice(0, max_name).replace(brReg, '');
 				PUBNUB.publish({
 					'channel' : pub_channel,
 					'message' : {
@@ -271,7 +270,7 @@
 						'sender' : ids[uuid] || 'Anonymous',	
 						'color' : color,
 						'uuid' : uuid,
-						'content' : that.value.slice(0, max_msg).replace(br_rx, '')
+						'content' : that.value.slice(0, max_msg).replace(brReg, '')
 					}
 				});
 				counter.innerHTML = max_msg;
