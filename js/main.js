@@ -197,7 +197,7 @@
 			this.el.innerHTML = this.template(_model);
 			this.el.setAttribute('id', _model.uuid);
 			this.el.firstChild.innerHTML = _model.name;
-			//this.el.style.background-color = '#' + _model.color;
+			this.el.firstChild.style.backgroundColor = '#' + _model.color;
 			return this;
 		}
 	});
