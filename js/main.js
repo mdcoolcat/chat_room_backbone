@@ -46,6 +46,19 @@
 		return bubble;
 	}
 	
+	function newMessage(user, content, color) {
+		var bubble = document.createElement('div');
+		// Update The Message Text Body
+		bubble.innerHTML = PUBNUB.supplant(message_bubble_tpl,
+				{
+					'username' : user
+							|| 'Anonymous',
+					'background' : color,
+					'message' : content
+				});
+		return bubble;
+	}
+	
 	function updateNamebar(newName) {
 		// my_channel = 'ch' + name;//easy for finding private
 		var namebar = document.getElementById('namebar');
@@ -137,7 +150,7 @@
 					cur_sysbbl++;
 			} else if (message['type'] === 'chat') {	//chat message
 				the_content = replaceAt(message['content']);
-				var bubble = new_bubble(message['sender'], the_content.message, message['color']);
+				var bubble = newMessage(message['sender'], the_content.message, message['color']);
 				box.innerHTML = bubble.innerHTML + box.innerHTML;
 				input.value = '';
 				input.focus();
@@ -286,8 +299,8 @@
 					}
 				});
 				counter.innerHTML = max_msg;
-			} 
 			return true;
+			} 
 		},
 		
 		'countChar' : function(e) {
