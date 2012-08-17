@@ -120,8 +120,19 @@
 	//remove me from the group (also storage)
 	window.onunload = function() {
 			var _user = users.get(uuid);
-			if (_user)
+			if (_user) {
+				PUBNUB.publish({
+					'channel' : pub_channel,
+					'message' : {
+						'type' : 'user',
+						'uuid' : uuid,
+						'color' : color,
+						'content' : _user.get('name'),
+						'leave' : true
+					}
+				});
 				_user.destroy();
+			}
 	}
 	
 	PUBNUB.subscribe({
@@ -131,11 +142,20 @@
 						console.log(users.models);
 						var name = message['content'];
 						var the_uuid = message['uuid'];
-						if (!ids[the_uuid]) { // new user
+						if (message['leave']) {//user leave the chat
+							var _u = users.get(the_uuid);
+							if (_u) {
+								_u.destroy();
+								users.userlist.renderList(users);	//why remove() doesn't work
+								delete names[name];
+
+								var sysinfo = newSysInfo(sys_type.USER, name, 'leaves the chat', format_time());
+								list.innerHTML = sysinfo.innerHTML + list.innerHTML;
+							}
+						} else if (!ids[the_uuid]) { // new user
 							ids[the_uuid] = name;
 							names[name] = true;
-							var sysinfo = newSysInfo(sys_type.USER, name,
-									'joins the chat', format_time());
+							var sysinfo = newSysInfo(sys_type.USER, name, 'joins the chat', format_time());
 							list.innerHTML = sysinfo.innerHTML + list.innerHTML;
 							// members.innerHTML += member_bbl.innerHTML;
 							// //maybe sort by name?
@@ -149,9 +169,11 @@
 								updateNamebar(name);
 							}
 						} else { // change name
-							if (uuid !== the_uuid) {// other use change
+							if (uuid !== the_uuid) {// other user change
 								var old = ids[the_uuid];
 								ids[the_uuid] = name;
+								delete names[old];
+								names[name] = true;
 								var sysinfo = newSysInfo(sys_type.USER, old,
 										'changed nickname: ' + name,
 										format_time());
@@ -167,16 +189,15 @@
 								});
 								console.log(users.models);
 								if (document.getElementById(the_uuid))
-									document.getElementById(the_uuid).innerHTML = name; // group
-																						// member
-																						// list
+									document.getElementById(the_uuid).innerHTML = name; // group member list
 							} else {// my change
-								if (name === ids[uuid]) {
-									tips.innerHTML = 'This is your current name :-)';
-								} else if (!names[name]) {// yeah this name
+//								if (name === ids[uuid]) {
+//									tips.innerHTML = 'This is your current name :-)';
+//								} else if (!names[name]) {// yeah this name
 															// not yet used
 									// var old = ids[the_uuid];
 									ids[the_uuid] = name;
+									names[name] = true;
 									var sysinfo = newSysInfo(sys_type.USER,
 											'You', 'changed nickname: ' + name,
 											format_time());
@@ -196,8 +217,8 @@
 									// if (the_uuid === uuid) //its me, change
 									// the ui and private ch
 									updateNamebar(name);
-								} else
-									tips.innerHTML = 'This name already taken :-(';
+//								} else
+//									tips.innerHTML = 'This name already taken :-(';
 							}
 						}// end change name
 
@@ -262,12 +283,17 @@
 		renderList : function(collection) {
 			var theList = '';
 			for (var i = 0; i < collection.models.length; i++) {
+				var _m = collection.models[i];
+				ids[_m.get('id')] = _m.get('name');
+				names[_m.get('name')] = true;
 				theList += new UserView({
-					model : collection.models[i]
+					model : _m
 				}).render().el.innerHTML;
 			}
 			//var tpl = _.template(userlist_tpl);
 			collection.userlist.el.innerHTML = theList;
+			console.log(names);
+			console.log(ids);
 		}
 	});
 
@@ -278,8 +304,9 @@
 
 		initialize : function() {
 			_.bindAll(this, 'render');
-			this.model.bind('change', this.render);
 			this.model.view = this;
+			this.model.bind('change', this.render);
+			//this.model.bind('destroy', this.remove);
 		},
 
 		render : function() {
@@ -324,8 +351,9 @@
 			name_change.style.visibility = 'hidden';
 			users.fetch();
 			console.log(users.models);
-			if (users.length)
+			if (users.length) {
 				users.userlist.renderList(users);
+			}
 		},
 		events : {
 			'keydown #username' : 'newUser',
@@ -346,6 +374,14 @@
 					return false;
 				}
 				var name = that.value.slice(0, max_name).replace(brReg, '');
+				if (name === ids[uuid]) {
+					tips.innerHTML = 'This is your current name :-)';
+					return false;
+				}
+				if (names[name]) {//in use
+					tips.innerHTML = 'This name already taken :-(';
+					return false;
+				}
 				PUBNUB.publish({
 					'channel' : pub_channel,
 					'message' : {
