@@ -30,7 +30,9 @@
 	// 10px;border-radius:20px;-moz-border-radius:50px;-webkit-border-radius:50px;overflow:hidden;-o-transition:all
 	// 0.3s;-moz-transition:all 0.3s;-webkit-transition:all 0.3s;transition:all
 	// 0.3s;position:relative;">{username}</div>';
-
+	var member_tpl = '<div class="member-name" style="max-width:400px;color:#fff;font-size:12px;text-shadow: #000 0 1px 1px;font-size: 15px;background-image:-moz-linear-gradient(rgba(255,255,255,0.8)0%,rgba(0,0,0,0)100%);background-image:-webkit-gradient(linear,left top,left bottom,from(rgba(255,255,255,0.8)),to(rgba(0,0,0,0)));border:0;margin:2px 0px 5px 0px;padding:3px 20px 3px 10px;border-radius:20px;-moz-border-radius:50px;-webkit-border-radius:50px;overflow:hidden;-o-transition:all 0.3s;-moz-transition:all 0.3s;-webkit-transition:all 0.3s;transition:all 0.3s;position:relative;"></div>';
+	var userlist_tpl = '<ul><% _.each(users, function(user){ %><li><div class="member-name" style="max-width:400px;color:#fff;font-size:12px;text-shadow: #000 0 1px 1px;font-size: 15px;background-image:-moz-linear-gradient(rgba(255,255,255,0.8)0%,rgba(0,0,0,0)100%);background-image:-webkit-gradient(linear,left top,left bottom,from(rgba(255,255,255,0.8)),to(rgba(0,0,0,0)));border:0;margin:2px 0px 5px 0px;padding:3px 20px 3px 10px;border-radius:20px;-moz-border-radius:50px;-webkit-border-radius:50px;overflow:hidden;-o-transition:all 0.3s;-moz-transition:all 0.3s;-webkit-transition:all 0.3s;transition:all 0.3s;position:relative;"><%= user.get("name")%></div></li><% });%></ul>'
+	
 	// global functions
 	function newSysInfo(sys_type, name, info, time) {
 		var bubble = document.createElement('div');
@@ -256,31 +258,39 @@
 				model : model
 			}).render().el;
 			this.userlist.el.innerHTML += member_bbl.innerHTML;
+		},
+		renderList : function(collection) {
+			var theList = '';
+			for (var i = 0; i < collection.models.length; i++) {
+				theList += new UserView({
+					model : collection.models[i]
+				}).render().el.innerHTML;
+			}
+			//var tpl = _.template(userlist_tpl);
+			collection.userlist.el.innerHTML = theList;
 		}
 	});
 
-	var UserView = Backbone.View
-			.extend({
-				tagName : 'div',
-				template : _
-						.template('<div class="member-name" style="max-width:400px;color:#fff;font-size:12px;text-shadow: #000 0 1px 1px;font-size: 15px;background-image:-moz-linear-gradient(rgba(255,255,255,0.8)0%,rgba(0,0,0,0)100%);background-image:-webkit-gradient(linear,left top,left bottom,from(rgba(255,255,255,0.8)),to(rgba(0,0,0,0)));border:0;margin:2px 0px 5px 0px;padding:3px 20px 3px 10px;border-radius:20px;-moz-border-radius:50px;-webkit-border-radius:50px;overflow:hidden;-o-transition:all 0.3s;-moz-transition:all 0.3s;-webkit-transition:all 0.3s;transition:all 0.3s;position:relative;"></div>'),
+	var UserView = Backbone.View.extend({
+		tagName : 'div',
+		//template : _.template('<div class="member-name" style="max-width:400px;color:#fff;font-size:12px;text-shadow: #000 0 1px 1px;font-size: 15px;background-image:-moz-linear-gradient(rgba(255,255,255,0.8)0%,rgba(0,0,0,0)100%);background-image:-webkit-gradient(linear,left top,left bottom,from(rgba(255,255,255,0.8)),to(rgba(0,0,0,0)));border:0;margin:2px 0px 5px 0px;padding:3px 20px 3px 10px;border-radius:20px;-moz-border-radius:50px;-webkit-border-radius:50px;overflow:hidden;-o-transition:all 0.3s;-moz-transition:all 0.3s;-webkit-transition:all 0.3s;transition:all 0.3s;position:relative;"></div>'),
+		template: _.template(member_tpl),
 
-				initialize : function() {
-					_.bindAll(this, 'render');
-					this.model.bind('change', this.render);
-					this.model.view = this;
-				},
+		initialize : function() {
+			_.bindAll(this, 'render');
+			this.model.bind('change', this.render);
+			this.model.view = this;
+		},
 
-				render : function() {
-					var _model = this.model.toJSON();
-					this.el.innerHTML = this.template(_model);
-					this.el.firstChild.setAttribute('id', _model.id);
-					this.el.firstChild.innerHTML = _model.name;
-					this.el.firstChild.style.backgroundColor = '#'
-							+ _model.color;
-					return this;
-				}
-			});
+		render : function() {
+			var _model = this.model.toJSON();
+			this.el.innerHTML = this.template(_model);
+			this.el.firstChild.setAttribute('id', _model.id);
+			this.el.firstChild.innerHTML = _model.name;
+			this.el.firstChild.style.backgroundColor = '#' + _model.color;
+			return this;
+		}
+	});
 
 	var User = Backbone.Model.extend({
 		changeName : function(name) {
@@ -314,6 +324,8 @@
 			name_change.style.visibility = 'hidden';
 			users.fetch();
 			console.log(users.models);
+			if (users.length)
+				users.userlist.renderList(users);
 		},
 		events : {
 			'keydown #username' : 'newUser',
