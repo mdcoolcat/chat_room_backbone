@@ -115,8 +115,14 @@
 		// return r;
 	}
 
-	PUBNUB
-			.subscribe({
+	//remove me from the group (also storage)
+	window.onunload = function() {
+			var _user = users.get(uuid);
+			if (_user)
+				_user.destroy();
+	}
+	
+	PUBNUB.subscribe({
 				'channel' : pub_channel,
 				'callback' : function(message) {
 					if (message['type'] === 'user') {

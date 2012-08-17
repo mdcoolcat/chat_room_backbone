@@ -36,7 +36,7 @@ function wireUpEvents() {
 			}
 		}
 	};
-
+	
 	// Attach the event keypress to exclude the F5 refresh
 	// $('document').bind('keydown', function(e) {
 	// if (e.keyCode == 116) {
