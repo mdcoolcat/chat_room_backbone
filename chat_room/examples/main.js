@@ -31,7 +31,7 @@
 	// 0.3s;-moz-transition:all 0.3s;-webkit-transition:all 0.3s;transition:all
 	// 0.3s;position:relative;">{username}</div>';
 	var member_tpl = '<div class="member-name" style="max-width:400px;color:#fff;font-size:12px;text-shadow: #000 0 1px 1px;font-size: 15px;background-image:-moz-linear-gradient(rgba(255,255,255,0.8)0%,rgba(0,0,0,0)100%);background-image:-webkit-gradient(linear,left top,left bottom,from(rgba(255,255,255,0.8)),to(rgba(0,0,0,0)));border:0;margin:2px 0px 5px 0px;padding:3px 20px 3px 10px;border-radius:20px;-moz-border-radius:50px;-webkit-border-radius:50px;overflow:hidden;-o-transition:all 0.3s;-moz-transition:all 0.3s;-webkit-transition:all 0.3s;transition:all 0.3s;position:relative;"></div>';
-	var userlist_tpl = '<ul><% _.each(users, function(user){ %><li><div class="member-name" style="max-width:400px;color:#fff;font-size:12px;text-shadow: #000 0 1px 1px;font-size: 15px;background-image:-moz-linear-gradient(rgba(255,255,255,0.8)0%,rgba(0,0,0,0)100%);background-image:-webkit-gradient(linear,left top,left bottom,from(rgba(255,255,255,0.8)),to(rgba(0,0,0,0)));border:0;margin:2px 0px 5px 0px;padding:3px 20px 3px 10px;border-radius:20px;-moz-border-radius:50px;-webkit-border-radius:50px;overflow:hidden;-o-transition:all 0.3s;-moz-transition:all 0.3s;-webkit-transition:all 0.3s;transition:all 0.3s;position:relative;"><%= user.get("name")%></div></li><% });%></ul>'
+	var userlist_tpl = '<ul><% _.each(users, function(user){ %><li><div class="member-name" style="max-width:400px;color:#fff;font-size:12px;text-shadow: #000 0 1px 1px;font-size: 15px;background-image:-moz-linear-gradient(rgba(255,255,255,0.8)0%,rgba(0,0,0,0)100%);background-image:-webkit-gradient(linear,left top,left bottom,from(rgba(255,255,255,0.8)),to(rgba(0,0,0,0)));border:0;margin:2px 0px 5px 0px;padding:3px 20px 3px 10px;border-radius:20px;-moz-border-radius:50px;-webkit-border-radius:50px;overflow:hidden;-o-transition:all 0.3s;-moz-transition:all 0.3s;-webkit-transition:all 0.3s;transition:all 0.3s;position:relative;"><%= user.get("name")%></div></li><% });%></ul>';
 	
 	// global functions
 	function newSysInfo(sys_type, name, info, time) {
@@ -131,7 +131,10 @@
 						'leave' : true
 					}
 				});
-				_user.destroy();
+//				_user.destroy({success: function(model, response) {
+//					console.log('destroy!');
+//					}
+//				});
 			}
 	}
 	
@@ -153,21 +156,24 @@
 								list.innerHTML = sysinfo.innerHTML + list.innerHTML;
 							}
 						} else if (!ids[the_uuid]) { // new user
-							ids[the_uuid] = name;
-							names[name] = true;
-							var sysinfo = newSysInfo(sys_type.USER, name, 'joins the chat', format_time());
-							list.innerHTML = sysinfo.innerHTML + list.innerHTML;
-							// members.innerHTML += member_bbl.innerHTML;
-							// //maybe sort by name?
-							users.create({
-								id : the_uuid,
-								name : name,
-								color : message['color']
+							
+							users.create({id : the_uuid, name : name, color : message['color']}, {
+								success: function() {
+									console.log('create user!');
+									ids[the_uuid] = name;
+									names[name] = true;
+									var sysinfo = newSysInfo(sys_type.USER, name, 'joins the chat', format_time());
+									list.innerHTML = sysinfo.innerHTML + list.innerHTML;
+									// members.innerHTML += member_bbl.innerHTML;
+									// //maybe sort by name?
+									if (the_uuid === uuid) {// its me, change the ui
+										updateNamebar(name);
+									}
+								},
+								error: function(model, res) {
+									console.log('crete error',res);
+								}
 							});
-							console.log(users.models);
-							if (the_uuid === uuid) {// its me, change the ui
-								updateNamebar(name);
-							}
 						} else { // change name
 							if (uuid !== the_uuid) {// other user change
 								var old = ids[the_uuid];
@@ -181,11 +187,15 @@
 										+ list.innerHTML;
 								// users collection...
 								var _user = users.get(the_uuid);
-								_user.set({
-									name : name
+								_user.set({name : name}, {
+									success: function(model, response) {
+										console.log('set user ok');
+									}
 								});
-								_user.save({
-									name : name
+								_user.save({name : name}, {
+									success: function(model, res) {
+										console.log('save user ok', model);
+									}
 								});
 								console.log(users.models);
 								if (document.getElementById(the_uuid))
@@ -320,22 +330,29 @@
 	});
 
 	var User = Backbone.Model.extend({
-		changeName : function(name) {
-			this.set({
-				'name' : name
-			})
+		url : function() {
+			var base = 'http://localhost:8888/model';
+		      if (this.isNew()) return base;
+		      return base + (base.charAt(base.length - 1) == '/' ? '' : '/') + this.id + '?name=' + this.get('name');
 		}
 	});
 
 	var Users = Backbone.Collection.extend({
 		model : User,
-		localStorage : new Store('users'),
+		//localStorage : new Store('users'),
+		url : 'http://localhost:8888/users',
+
+//		parse: function(response) {
+//		    return response.results;
+//		},
+		
 		initialize : function() {
 			// When initialized we want to associate a view with this collection
 			this.userlist = new UserList;
 			this.bind('add', this.userlist.addOne); // later change to render?
 			// because sort
 		},
+		
 		comparator : function(user) {
 			return user.get('name');
 		}
@@ -349,11 +366,18 @@
 			username.focus();
 			counter.innerHTML = max_msg;
 			name_change.style.visibility = 'hidden';
-			users.fetch();
+			users.fetch({
+				success: function(model, res) {
+					console.log('fetch ok');
 			console.log(users.models);
 			if (users.length) {
 				users.userlist.renderList(users);
 			}
+				},
+				error: function(model, res) {
+					console.log('fetch fail', res.responseText);
+				}
+			});
 		},
 		events : {
 			'keydown #username' : 'newUser',

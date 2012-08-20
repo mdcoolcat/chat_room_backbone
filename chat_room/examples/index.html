@@ -194,9 +194,20 @@ a {
 	<!-- <script src="http://ajax.cdnjs.com/ajax/libs/underscore.js/1.1.4/underscore-min.js"></script> -->
 	<!-- <script src="http://ajax.cdnjs.com/ajax/libs/backbone.js/0.3.3/backbone-min.js"></script> -->
 	<script type="text/javascript" src="../../backbone.js"></script> 
-	<script type="text/javascript" src="../backbone-localstorage.js"></script>
+<!-- 	<script type="text/javascript" src="../backbone-localstorage.js"></script> -->
 	<script type="text/javascript" src="main.js"></script>
+	<script type="text/javascript" src="ajax.js"></script>
 	<script type="text/javascript" src="check_browser_close.js"></script>
 
+	<!-- underscore templates -->
+	<script type="text/template" id="userlistul">
+        <ul>
+        <% _.each(users, function(user){ %>
+            <li>
+				<div class="member-name" style="max-width:400px;color:#fff;font-size:12px;text-shadow: #000 0 1px 1px;font-size: 15px;background-image:-moz-linear-gradient(rgba(255,255,255,0.8)0%,rgba(0,0,0,0)100%);background-image:-webkit-gradient(linear,left top,left bottom,from(rgba(255,255,255,0.8)),to(rgba(0,0,0,0)));border:0;margin:2px 0px 5px 0px;padding:3px 20px 3px 10px;border-radius:20px;-moz-border-radius:50px;-webkit-border-radius:50px;overflow:hidden;-o-transition:all 0.3s;-moz-transition:all 0.3s;-webkit-transition:all 0.3s;transition:all 0.3s;position:relative;"><%= user.name%></div>'
+            </li>
+        <% }); %>
+        </ul>
+    </script>
 </body>
 </html>
