@@ -121,6 +121,7 @@
 	window.onunload = function() {
 			var _user = users.get(uuid);
 			if (_user) {
+				//destroy ok then publish???
 				PUBNUB.publish({
 					'channel' : pub_channel,
 					'message' : {
@@ -131,10 +132,13 @@
 						'leave' : true
 					}
 				});
-//				_user.destroy({success: function(model, response) {
-//					console.log('destroy!');
-//					}
-//				});
+				_user.destroy({success: function(model, response) {
+					console.log('destroy!');
+					},
+					error: function(model, response) {
+						console.log(response);
+					}
+				});
 			}
 	}
 	
@@ -185,18 +189,18 @@
 										format_time());
 								list.innerHTML = sysinfo.innerHTML
 										+ list.innerHTML;
-								// users collection...
-								var _user = users.get(the_uuid);
-								_user.set({name : name}, {
-									success: function(model, response) {
-										console.log('set user ok');
-									}
-								});
-								_user.save({name : name}, {
-									success: function(model, res) {
-										console.log('save user ok', model);
-									}
-								});
+								// users collection no need do change..already updated by the one changed
+//								var _user = users.get(the_uuid);
+//								_user.set({name : name}, {
+//									success: function(model, response) {
+//										console.log('set user ok');
+//									}
+//								});
+//								_user.save({name : name}, {
+//									success: function(model, res) {
+//										console.log('save user ok', model);
+//									}
+//								});
 								console.log(users.models);
 								if (document.getElementById(the_uuid))
 									document.getElementById(the_uuid).innerHTML = name; // group member list
@@ -206,27 +210,28 @@
 //								} else if (!names[name]) {// yeah this name
 															// not yet used
 									// var old = ids[the_uuid];
-									ids[the_uuid] = name;
-									names[name] = true;
-									var sysinfo = newSysInfo(sys_type.USER,
-											'You', 'changed nickname: ' + name,
-											format_time());
-									list.innerHTML = sysinfo.innerHTML
-											+ list.innerHTML;
+									
 									// users collection...
 									var _user = users.get(the_uuid);
 									// _user.set({name: name});
-									_user.save({
-										name : name
+									_user.save({name : name}, {
+										success: function(model, res) {
+											console.log('save user ok', model);
+											ids[the_uuid] = name;
+											names[name] = true;
+											var sysinfo = newSysInfo(sys_type.USER,
+													'You', 'changed nickname: ' + name,
+													format_time());
+											list.innerHTML = sysinfo.innerHTML
+													+ list.innerHTML;
+											document.getElementById(the_uuid).innerHTML = name;
+											// if (the_uuid === uuid) //its me, change the ui and private ch
+											updateNamebar(name);
+										}
 									});
 									console.log(users.models);
 									// if (document.getElementById(the_uuid))
-									document.getElementById(the_uuid).innerHTML = name; // group
-																						// member
-																						// list
-									// if (the_uuid === uuid) //its me, change
-									// the ui and private ch
-									updateNamebar(name);
+									
 //								} else
 //									tips.innerHTML = 'This name already taken :-(';
 							}
@@ -292,8 +297,13 @@
 		},
 		renderList : function(collection) {
 			var theList = '';
-			for (var i = 0; i < collection.models.length; i++) {
-				var _m = collection.models[i];
+			var theArray;
+			if (collection.models) 
+				theArray = collection.models;
+			else
+				theArray = collection;
+			for (var i = 0; i < theArray.length; i++) {
+				var _m = theArray[i];
 				ids[_m.get('id')] = _m.get('name');
 				names[_m.get('name')] = true;
 				theList += new UserView({
@@ -301,10 +311,11 @@
 				}).render().el.innerHTML;
 			}
 			//var tpl = _.template(userlist_tpl);
-			collection.userlist.el.innerHTML = theList;
+			//collection.userlist.el.innerHTML = theList;
+			this.el.innerHTML = theList;
 			console.log(names);
 			console.log(ids);
-		}
+		},
 	});
 
 	var UserView = Backbone.View.extend({
@@ -330,6 +341,13 @@
 	});
 
 	var User = Backbone.Model.extend({
+//		initialized: function(id, name, color) {
+//			return {
+//				id: id,
+//				name : name || 'Anonymous',
+//				color : color
+//			};
+//		},
 		url : function() {
 			var base = 'http://localhost:8888/model';
 		      if (this.isNew()) return base;
@@ -342,9 +360,20 @@
 		//localStorage : new Store('users'),
 		url : 'http://localhost:8888/users',
 
-//		parse: function(response) {
-//		    return response.results;
-//		},
+		parse: function(response) {
+			console.log('\'' + response.responseText.slice(0, -1) + ']\'');
+			//var models = JSON.parse(res.responseText.slice(0, -1) + ']');
+			return JSON.parse(res.responseText.slice(0, -1) + ']');
+			var collection = [];
+			if (models.length) {	//construct collection...
+				for (var _m in models) {
+					var tmp = new User({
+						id : _m._id, name : _m.name, color : _m.color
+						});
+					collection.push(tmp);
+				}
+			}
+		},
 		
 		initialize : function() {
 			// When initialized we want to associate a view with this collection
@@ -369,13 +398,21 @@
 			users.fetch({
 				success: function(model, res) {
 					console.log('fetch ok');
-			console.log(users.models);
-			if (users.length) {
-				users.userlist.renderList(users);
-			}
+					if (users.length) {
+						users.userlist.renderList(users);
+					}
 				},
 				error: function(model, res) {
-					console.log('fetch fail', res.responseText);
+					console.log('\'' + res.responseText.slice(0, -1) + ']\'');
+					var models = JSON.parse(res.responseText.slice(0, -1) + ']');
+					var collection = [];
+						for (var i = 0; i < models.length; i++) {
+							var tmp = new User({
+								id : models[i]._id, name : models[i].name, color : models[i].color
+								});
+							collection.push(tmp);
+						}
+						users.userlist.renderList(collection);
 				}
 			});
 		},
